@@ -1,15 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 import { PHASE_LABELS } from '../constants/techniques';
 import { formatTime } from '../utils/formatTime';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const RING_SIZE = SCREEN_WIDTH * 0.65;
+const RING_SIZE = SCREEN_WIDTH * 0.68;
 const BASE_RADIUS = RING_SIZE * 0.42;
-const MAX_RADIUS = RING_SIZE * 0.50;
-const RING_STROKE = 5;
+const MAX_RADIUS = RING_SIZE * 0.48;
+const RING_STROKE = 6;
+const TRACK_STROKE = 2;
 
 interface BreathingRingProps {
   progress: number;
@@ -18,6 +18,9 @@ interface BreathingRingProps {
   isActive: boolean;
   totalElapsed: number;
   cycleCount: number;
+  phaseRemaining?: number;
+  techniqueName?: string;
+  targetDuration?: number;
 }
 
 export default function BreathingRing({
@@ -27,6 +30,9 @@ export default function BreathingRing({
   isActive,
   totalElapsed,
   cycleCount,
+  phaseRemaining = 0,
+  techniqueName = '',
+  targetDuration = 300,
 }: BreathingRingProps) {
   const radius = (() => {
     if (!isActive || !phaseType) return BASE_RADIUS;
@@ -44,60 +50,47 @@ export default function BreathingRing({
     }
   })();
 
-  const glowOpacity = isActive ? 0.3 + progress * 0.3 : 0.1;
   const diameter = radius * 2;
+  const trackDiameter = BASE_RADIUS * 2 + 10;
 
-  // Tick mark position
+  // Tick mark
   const tickAngle = progress * Math.PI * 2 - Math.PI / 2;
   const tickX = RING_SIZE / 2 + radius * Math.cos(tickAngle) - 4;
   const tickY = RING_SIZE / 2 + radius * Math.sin(tickAngle) - 4;
 
-  const phaseLabel = phaseType ? PHASE_LABELS[phaseType] : 'READY';
+  const phaseLabel = phaseType ? PHASE_LABELS[phaseType] : '';
 
   return (
     <View style={[styles.container, { width: RING_SIZE, height: RING_SIZE }]}>
-      {/* Outer glow */}
+      {/* Track ring (always visible) */}
       <View
         style={[
           styles.centered,
           {
-            width: diameter + 50,
-            height: diameter + 50,
-            borderRadius: (diameter + 50) / 2,
-            backgroundColor: color,
-            opacity: glowOpacity * 0.08,
+            width: trackDiameter,
+            height: trackDiameter,
+            borderRadius: trackDiameter / 2,
+            borderWidth: TRACK_STROKE,
+            borderColor: colors.ring.track,
           },
         ]}
       />
 
-      {/* Inner glow */}
-      <View
-        style={[
-          styles.centered,
-          {
-            width: diameter + 20,
-            height: diameter + 20,
-            borderRadius: (diameter + 20) / 2,
-            backgroundColor: color,
-            opacity: glowOpacity * 0.12,
-          },
-        ]}
-      />
-
-      {/* Outer subtle ring */}
-      <View
-        style={[
-          styles.centered,
-          {
-            width: diameter + 24,
-            height: diameter + 24,
-            borderRadius: (diameter + 24) / 2,
-            borderWidth: 1,
-            borderColor: color,
-            opacity: 0.08,
-          },
-        ]}
-      />
+      {/* Ambient glow behind active ring */}
+      {isActive && (
+        <View
+          style={[
+            styles.centered,
+            {
+              width: diameter + 30,
+              height: diameter + 30,
+              borderRadius: (diameter + 30) / 2,
+              backgroundColor: color,
+              opacity: 0.06,
+            },
+          ]}
+        />
+      )}
 
       {/* Main ring */}
       <View
@@ -109,64 +102,32 @@ export default function BreathingRing({
             borderRadius: radius,
             borderWidth: RING_STROKE,
             borderColor: color,
-            opacity: 0.9,
+            opacity: isActive ? 0.85 : 0.25,
+            shadowColor: color,
+            shadowOpacity: isActive ? 0.15 : 0,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 0 },
           },
         ]}
       />
 
-      {/* Inner subtle ring */}
-      <View
-        style={[
-          styles.centered,
-          {
-            width: diameter - 24,
-            height: diameter - 24,
-            borderRadius: (diameter - 24) / 2,
-            borderWidth: 1,
-            borderColor: color,
-            opacity: 0.12,
-          },
-        ]}
-      />
-
-      {/* Content INSIDE the ring */}
+      {/* Inner content */}
       <View style={styles.innerContent}>
-        <Text style={[styles.timer, { opacity: isActive ? 1 : 0.3 }]}>
-          {formatTime(totalElapsed)}
-        </Text>
-        <Text
-          style={[
-            styles.phaseLabel,
-            {
-              color: isActive ? color : colors.text.tertiary,
-              opacity: isActive ? 1 : 0.4,
-            },
-          ]}
-        >
-          {phaseLabel}
-        </Text>
-        {isActive && cycleCount > 0 && (
-          <Text style={styles.cycleText}>
-            {cycleCount} {cycleCount === 1 ? 'cycle' : 'cycles'}
-          </Text>
+        {isActive ? (
+          <>
+            {/* Active: phase label + countdown */}
+            <Text style={[styles.phaseLabel, { color }]}>{phaseLabel}</Text>
+            <Text style={[styles.phaseCountdown, { color }]}>{phaseRemaining}s</Text>
+            <Text style={styles.elapsed}>{formatTime(totalElapsed)}</Text>
+          </>
+        ) : (
+          <>
+            {/* Pre-session: target duration + technique name */}
+            <Text style={styles.targetDuration}>{formatTime(targetDuration)}</Text>
+            <Text style={styles.techniqueNameInner}>{techniqueName}</Text>
+          </>
         )}
       </View>
-
-      {/* Center dot */}
-      {!isActive && (
-        <View
-          style={[
-            styles.centered,
-            {
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: color,
-              opacity: 0.2,
-            },
-          ]}
-        />
-      )}
 
       {/* Tick mark */}
       {isActive && (
@@ -179,7 +140,6 @@ export default function BreathingRing({
             height: 8,
             borderRadius: 4,
             backgroundColor: color,
-            opacity: 0.9,
           }}
         />
       )}
@@ -200,25 +160,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  timer: {
+  phaseLabel: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 16,
+    letterSpacing: 6,
+    textTransform: 'uppercase',
+  },
+  phaseCountdown: {
+    fontFamily: 'DMMono-Medium',
+    fontSize: 36,
+    letterSpacing: 2,
+    marginTop: 4,
+  },
+  elapsed: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: colors.text.tertiary,
+    marginTop: 12,
+  },
+  targetDuration: {
     fontFamily: 'DMMono-Medium',
     fontSize: 48,
     letterSpacing: 3,
     color: colors.text.primary,
   },
-  phaseLabel: {
-    fontFamily: 'DMMono-Regular',
-    fontSize: 16,
-    letterSpacing: 6,
+  techniqueNameInner: {
+    fontFamily: 'Fraunces-Regular',
+    fontSize: 15,
+    color: colors.text.secondary,
     marginTop: 6,
-    textTransform: 'uppercase',
-  },
-  cycleText: {
-    fontFamily: 'DMMono-Regular',
-    fontSize: 11,
-    letterSpacing: 2,
-    color: colors.text.tertiary,
-    marginTop: 10,
-    textTransform: 'uppercase',
+    textAlign: 'center',
   },
 });

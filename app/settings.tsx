@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 import { getPreferences, savePreferences, UserPreferences } from '../utils/storage';
 
 export default function SettingsScreen() {
@@ -41,48 +40,66 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>PREFERENCES</Text>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Haptic Feedback</Text>
-          <Switch
-            value={prefs.hapticsEnabled}
-            onValueChange={(v) => updatePref('hapticsEnabled', v)}
-            trackColor={{ false: colors.bg.tertiary, true: colors.accent.dim }}
-            thumbColor={prefs.hapticsEnabled ? colors.accent.primary : colors.text.tertiary}
-          />
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Sound</Text>
-          <Switch
-            value={prefs.soundEnabled}
-            onValueChange={(v) => updatePref('soundEnabled', v)}
-            trackColor={{ false: colors.bg.tertiary, true: colors.accent.dim }}
-            thumbColor={prefs.soundEnabled ? colors.accent.primary : colors.text.tertiary}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ABOUT</Text>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Version</Text>
-          <Text style={styles.rowValue}>1.0.0</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Haptic Feedback</Text>
+            <Switch
+              value={prefs.hapticsEnabled}
+              onValueChange={(v) => updatePref('hapticsEnabled', v)}
+              trackColor={{ false: colors.bg.tertiary, true: colors.accent.muted }}
+              thumbColor={prefs.hapticsEnabled ? colors.accent.primary : '#ccc'}
+            />
+          </View>
+          <View style={styles.rowDivider} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Sound on Phase Change</Text>
+            <Switch
+              value={prefs.soundEnabled}
+              onValueChange={(v) => updatePref('soundEnabled', v)}
+              trackColor={{ false: colors.bg.tertiary, true: colors.accent.muted }}
+              thumbColor={prefs.soundEnabled ? colors.accent.primary : '#ccc'}
+            />
+          </View>
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>SUBSCRIPTION</Text>
-        <TouchableOpacity
-          style={styles.subscribeButton}
-          onPress={() => router.push('/paywall')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.subscribeText}>Upgrade to Premium</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.restoreButton} activeOpacity={0.7}>
-          <Text style={styles.restoreText}>Restore Purchases</Text>
-        </TouchableOpacity>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => router.push('/paywall')}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.rowLabel}>Upgrade to Premium</Text>
+            <Text style={styles.rowChevron}>{'\u203A'}</Text>
+          </TouchableOpacity>
+          <View style={styles.rowDivider} />
+          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+            <Text style={styles.rowLabel}>Restore Purchases</Text>
+            <Text style={styles.rowChevron}>{'\u203A'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ABOUT</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+            <Text style={styles.rowLabel}>Privacy Policy</Text>
+            <Text style={styles.rowChevron}>{'\u203A'}</Text>
+          </TouchableOpacity>
+          <View style={styles.rowDivider} />
+          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+            <Text style={styles.rowLabel}>Terms of Service</Text>
+            <Text style={styles.rowChevron}>{'\u203A'}</Text>
+          </TouchableOpacity>
+          <View style={styles.rowDivider} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Version</Text>
+            <Text style={styles.rowValue}>1.1.0</Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -104,59 +121,57 @@ const styles = StyleSheet.create({
     width: 60,
   },
   backText: {
-    ...typography.body,
+    fontSize: 16,
     color: colors.accent.primary,
   },
   title: {
-    ...typography.heading,
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 20,
     color: colors.text.primary,
   },
   section: {
     paddingHorizontal: 20,
-    marginTop: 32,
+    marginTop: 28,
   },
   sectionTitle: {
-    ...typography.label,
+    fontFamily: 'DMMono-Regular',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
     color: colors.text.tertiary,
-    marginBottom: 16,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  card: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: 14,
+    shadowColor: '#2C2520',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.bg.secondary,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginLeft: 16,
   },
   rowLabel: {
-    ...typography.body,
+    fontSize: 15,
     color: colors.text.primary,
   },
   rowValue: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  subscribeButton: {
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  subscribeText: {
-    ...typography.body,
-    fontFamily: 'Jost-SemiBold',
-    color: colors.bg.primary,
-  },
-  restoreButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  restoreText: {
-    ...typography.body,
+    fontSize: 15,
     color: colors.text.tertiary,
-    fontSize: 13,
+  },
+  rowChevron: {
+    fontSize: 20,
+    color: colors.text.tertiary,
   },
 });

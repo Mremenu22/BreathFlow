@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,57 +7,63 @@ import {
   SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 import { techniques } from '../constants/techniques';
-import { getSessions, getStreak, getTotalMinutes, Session } from '../utils/storage';
+import { moods } from '../constants/moods';
+import { getSessions, getStreakDisplay, StreakData, Session, formatMinutesDisplay } from '../utils/storage';
 import { formatDuration } from '../utils/formatTime';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [stats, setStats] = useState({ total: 0, minutes: 0, current: 0, longest: 0 });
+  const [streak, setStreak] = useState<StreakData | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const load = async () => {
+        const [s, st] = await Promise.all([getSessions(), getStreakDisplay()]);
+        setSessions(s);
+        setStreak(st);
+      };
+      load();
+    }, [])
+  );
 
-  const loadData = async () => {
-    const data = await getSessions();
-    setSessions(data);
-    const streak = getStreak(data);
-    setStats({
-      total: data.length,
-      minutes: getTotalMinutes(data),
-      current: streak.current,
-      longest: streak.longest,
-    });
+  const getMoodEmoji = (moodId: string) => {
+    const mood = moods.find((m) => m.id === moodId);
+    return mood?.emoji || '';
   };
 
-  const getTechnique = (id: string) => techniques.find((t) => t.id === id);
-
-  const renderSession = ({ item }: { item: Session }) => {
-    const technique = getTechnique(item.techniqueId);
-    const date = new Date(item.startedAt);
-    return (
-      <View style={styles.sessionRow}>
-        <View style={[styles.dot, { backgroundColor: technique?.color ?? colors.accent.primary }]} />
-        <View style={styles.sessionInfo}>
-          <Text style={styles.sessionName}>{technique?.name ?? 'Unknown'}</Text>
-          <Text style={styles.sessionDate}>
-            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            {' \u00B7 '}
-            {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-        <View style={styles.sessionStats}>
-          <Text style={styles.sessionDuration}>{formatDuration(item.durationSeconds)}</Text>
-          <Text style={styles.sessionCycles}>{item.cycleCount} cycles</Text>
-        </View>
-      </View>
-    );
+  const getTechniqueName = (id: string) => {
+    return techniques.find((t) => t.id === id)?.name || 'Breathing';
   };
+
+  const getTechniqueColor = (id: string) => {
+    return techniques.find((t) => t.id === id)?.color || colors.accent.primary;
+  };
+
+  // Group sessions by date
+  const groupedSessions = sessions.reduce<Record<string, Session[]>>((acc, session) => {
+    const date = new Date(session.startedAt);
+    const today = new Date();
+    const yesterday = new Date(Date.now() - 86400000);
+
+    let label: string;
+    if (date.toDateString() === today.toDateString()) {
+      label = 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      label = 'Yesterday';
+    } else {
+      label = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    }
+
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(session);
+    return acc;
+  }, {});
+
+  const sectionData = Object.entries(groupedSessions);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,38 +75,57 @@ export default function HistoryScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      {/* Stats summary */}
-      <View style={styles.statsGrid}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.total}</Text>
-          <Text style={styles.statLabel}>SESSIONS</Text>
+      {/* Stats bar */}
+      {streak && (
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{streak.totalSessions}</Text>
+            <Text style={styles.statLabel}>SESSIONS</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{formatMinutesDisplay(streak.totalMinutes)}</Text>
+            <Text style={styles.statLabel}>TOTAL TIME</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{streak.currentStreak}</Text>
+            <Text style={styles.statLabel}>STREAK</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{streak.longestStreak}</Text>
+            <Text style={styles.statLabel}>BEST</Text>
+          </View>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.minutes}</Text>
-          <Text style={styles.statLabel}>MINUTES</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.current}</Text>
-          <Text style={styles.statLabel}>STREAK</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.longest}</Text>
-          <Text style={styles.statLabel}>BEST</Text>
-        </View>
-      </View>
+      )}
 
       {sessions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No sessions yet</Text>
-          <Text style={styles.emptySubtext}>Complete your first breathing session to see it here.</Text>
+          <Text style={styles.emptyTitle}>No sessions yet</Text>
+          <Text style={styles.emptyText}>Complete a breathing session to see your history here.</Text>
         </View>
       ) : (
         <FlatList
-          data={sessions}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSession}
+          data={sectionData}
+          keyExtractor={([label]) => label}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          renderItem={({ item: [label, groupSessions] }) => (
+            <View style={styles.dateGroup}>
+              <Text style={styles.dateLabel}>{label}</Text>
+              {groupSessions.map((session) => (
+                <View key={session.id} style={styles.sessionCard}>
+                  <View style={[styles.sessionDot, { backgroundColor: getTechniqueColor(session.techniqueId) }]} />
+                  <View style={styles.sessionInfo}>
+                    <Text style={styles.sessionTitle}>
+                      {getMoodEmoji(session.mood)} {getTechniqueName(session.techniqueId)}
+                    </Text>
+                    <Text style={styles.sessionMeta}>
+                      {formatDuration(session.durationSeconds)} · {session.cycleCount} cycles · {new Date(session.startedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         />
       )}
     </SafeAreaView>
@@ -123,14 +148,15 @@ const styles = StyleSheet.create({
     width: 60,
   },
   backText: {
-    ...typography.body,
+    fontSize: 16,
     color: colors.accent.primary,
   },
   title: {
-    ...typography.heading,
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 20,
     color: colors.text.primary,
   },
-  statsGrid: {
+  statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     marginBottom: 24,
@@ -140,32 +166,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg.secondary,
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
+    shadowColor: '#2C2520',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   statValue: {
-    ...typography.stat,
-    fontSize: 22,
+    fontFamily: 'DMMono-Medium',
+    fontSize: 18,
     color: colors.text.primary,
   },
   statLabel: {
-    ...typography.label,
-    fontSize: 9,
+    fontFamily: 'DMMono-Regular',
+    fontSize: 8,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
     color: colors.text.tertiary,
     marginTop: 4,
   },
   list: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  sessionRow: {
+  dateGroup: {
+    marginBottom: 20,
+  },
+  dateLabel: {
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 10,
+  },
+  sessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.bg.secondary,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 8,
+    shadowColor: '#2C2520',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
-  dot: {
+  sessionDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
@@ -174,29 +220,15 @@ const styles = StyleSheet.create({
   sessionInfo: {
     flex: 1,
   },
-  sessionName: {
-    ...typography.body,
-    fontFamily: 'Jost-SemiBold',
+  sessionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text.primary,
+    marginBottom: 2,
   },
-  sessionDate: {
-    ...typography.body,
+  sessionMeta: {
     fontSize: 12,
     color: colors.text.tertiary,
-    marginTop: 2,
-  },
-  sessionStats: {
-    alignItems: 'flex-end',
-  },
-  sessionDuration: {
-    ...typography.label,
-    color: colors.text.secondary,
-  },
-  sessionCycles: {
-    ...typography.body,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
   },
   empty: {
     flex: 1,
@@ -204,14 +236,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 40,
   },
-  emptyText: {
-    ...typography.heading,
+  emptyTitle: {
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 20,
     color: colors.text.secondary,
+    marginBottom: 8,
   },
-  emptySubtext: {
-    ...typography.body,
+  emptyText: {
+    fontSize: 14,
     color: colors.text.tertiary,
     textAlign: 'center',
-    marginTop: 8,
+    lineHeight: 20,
   },
 });

@@ -11,8 +11,8 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'DMMono-Regular': require('../assets/fonts/DMMono-Regular.ttf'),
     'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
-    'Jost-Regular': require('../assets/fonts/Jost-Regular.ttf'),
-    'Jost-SemiBold': require('../assets/fonts/Jost-SemiBold.ttf'),
+    'Fraunces-Regular': require('../assets/fonts/Fraunces-Regular.ttf'),
+    'Fraunces-SemiBold': require('../assets/fonts/Fraunces-SemiBold.ttf'),
   });
 
   useEffect(() => {
@@ -25,12 +25,12 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.bg.primary },
-          animation: 'fade',
+          animation: 'slide_from_right',
         }}
       />
     </>

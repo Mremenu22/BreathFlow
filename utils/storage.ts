@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Session {
   id: string;
+  mood: string;
   techniqueId: string;
   startedAt: string;
   durationSeconds: number;
@@ -15,8 +16,26 @@ export interface UserPreferences {
   hasCompletedOnboarding: boolean;
 }
 
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastSessionDate: string;
+  totalSessions: number;
+  totalMinutes: number;
+}
+
+export interface ChallengeProgress {
+  challengeId: string;
+  currentDay: number;
+  completedDays: number[];
+  startedAt: string;
+  isComplete: boolean;
+}
+
 const SESSIONS_KEY = 'breathflow_sessions';
 const PREFS_KEY = 'breathflow_preferences';
+const STREAK_KEY = 'breathflow_streak';
+const CHALLENGE_KEY = 'breathflow_challenge';
 
 const defaultPreferences: UserPreferences = {
   hapticsEnabled: true,
@@ -25,6 +44,15 @@ const defaultPreferences: UserPreferences = {
   hasCompletedOnboarding: false,
 };
 
+const defaultStreak: StreakData = {
+  currentStreak: 0,
+  longestStreak: 0,
+  lastSessionDate: '',
+  totalSessions: 0,
+  totalMinutes: 0,
+};
+
+// Sessions
 export async function getSessions(): Promise<Session[]> {
   try {
     const data = await AsyncStorage.getItem(SESSIONS_KEY);
@@ -38,8 +66,10 @@ export async function saveSession(session: Session): Promise<void> {
   const sessions = await getSessions();
   sessions.unshift(session);
   await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+  await updateStreak(session.durationSeconds);
 }
 
+// Preferences
 export async function getPreferences(): Promise<UserPreferences> {
   try {
     const data = await AsyncStorage.getItem(PREFS_KEY);
@@ -54,57 +84,98 @@ export async function savePreferences(prefs: Partial<UserPreferences>): Promise<
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ ...current, ...prefs }));
 }
 
-export function getStreak(sessions: Session[]): { current: number; longest: number } {
-  if (sessions.length === 0) return { current: 0, longest: 0 };
-
-  const days = new Set(
-    sessions.map((s) => new Date(s.startedAt).toISOString().split('T')[0])
-  );
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Walk backwards from today counting consecutive days
-  let current = 0;
-  let d = new Date(today);
-
-  // Check if today or yesterday has a session (otherwise current streak is 0)
-  const todayStr = d.toISOString().split('T')[0];
-  const yesterdayStr = new Date(d.getTime() - 86400000).toISOString().split('T')[0];
-
-  if (!days.has(todayStr) && !days.has(yesterdayStr)) {
-    current = 0;
-  } else {
-    // If no session today, start from yesterday
-    if (!days.has(todayStr)) {
-      d = new Date(d.getTime() - 86400000);
-    }
-    while (days.has(d.toISOString().split('T')[0])) {
-      current++;
-      d = new Date(d.getTime() - 86400000);
-    }
+// Streak
+export async function getStreak(): Promise<StreakData> {
+  try {
+    const data = await AsyncStorage.getItem(STREAK_KEY);
+    return data ? { ...defaultStreak, ...JSON.parse(data) } : defaultStreak;
+  } catch {
+    return defaultStreak;
   }
-
-  // Find longest streak by sorting all days and walking forward
-  const sortedDays = Array.from(days).sort();
-  let longest = 0;
-  let streak = 1;
-
-  for (let i = 1; i < sortedDays.length; i++) {
-    const prev = new Date(sortedDays[i - 1]).getTime();
-    const curr = new Date(sortedDays[i]).getTime();
-    if (curr - prev <= 86400000) {
-      streak++;
-    } else {
-      longest = Math.max(longest, streak);
-      streak = 1;
-    }
-  }
-  longest = Math.max(longest, streak, current);
-
-  return { current, longest };
 }
 
-export function getTotalMinutes(sessions: Session[]): number {
-  return Math.round(sessions.reduce((sum, s) => sum + s.durationSeconds, 0) / 60);
+async function updateStreak(durationSeconds: number): Promise<void> {
+  const streak = await getStreak();
+  const today = new Date().toISOString().split('T')[0];
+
+  streak.totalSessions += 1;
+  streak.totalMinutes += Math.round(durationSeconds / 60);
+
+  if (streak.lastSessionDate === today) {
+    // Already tracked today, just update totals
+  } else {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (streak.lastSessionDate === yesterday) {
+      streak.currentStreak += 1;
+    } else if (streak.lastSessionDate === '') {
+      streak.currentStreak = 1;
+    } else {
+      streak.currentStreak = 1;
+    }
+    streak.lastSessionDate = today;
+  }
+
+  streak.longestStreak = Math.max(streak.currentStreak, streak.longestStreak);
+  await AsyncStorage.setItem(STREAK_KEY, JSON.stringify(streak));
+}
+
+export async function getStreakDisplay(): Promise<StreakData> {
+  const streak = await getStreak();
+  // Check if streak is still valid (user might not have opened app for days)
+  if (streak.lastSessionDate) {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (streak.lastSessionDate !== today && streak.lastSessionDate !== yesterday) {
+      streak.currentStreak = 0;
+    }
+  }
+  return streak;
+}
+
+// Challenge Progress
+export async function getChallengeProgress(): Promise<ChallengeProgress | null> {
+  try {
+    const data = await AsyncStorage.getItem(CHALLENGE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function startChallenge(challengeId: string): Promise<ChallengeProgress> {
+  const progress: ChallengeProgress = {
+    challengeId,
+    currentDay: 1,
+    completedDays: [],
+    startedAt: new Date().toISOString(),
+    isComplete: false,
+  };
+  await AsyncStorage.setItem(CHALLENGE_KEY, JSON.stringify(progress));
+  return progress;
+}
+
+export async function completeChallengeDay(day: number): Promise<ChallengeProgress | null> {
+  const progress = await getChallengeProgress();
+  if (!progress) return null;
+
+  if (!progress.completedDays.includes(day)) {
+    progress.completedDays.push(day);
+  }
+
+  if (day < 7) {
+    progress.currentDay = day + 1;
+  } else {
+    progress.isComplete = true;
+  }
+
+  await AsyncStorage.setItem(CHALLENGE_KEY, JSON.stringify(progress));
+  return progress;
+}
+
+// Helper to format minutes
+export function formatMinutesDisplay(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }

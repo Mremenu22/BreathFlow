@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 
 type PlanId = 'yearly' | 'monthly' | 'lifetime';
 
@@ -25,8 +24,8 @@ export default function PaywallScreen() {
   const features = [
     '5 expert breathing techniques',
     'Custom pattern builder',
-    'Session history & stats',
-    'Unlimited sessions',
+    'Full session history',
+    '7-day challenge replay',
   ];
 
   return (
@@ -41,7 +40,7 @@ export default function PaywallScreen() {
         <View style={styles.features}>
           {features.map((f, i) => (
             <View key={i} style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{'\u2726'}</Text>
+              <Text style={styles.featureIcon}>{'\u2713'}</Text>
               <Text style={styles.featureText}>{f}</Text>
             </View>
           ))}
@@ -118,15 +117,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    ...typography.heading,
-    fontSize: 32,
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 30,
     color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
+    letterSpacing: -0.3,
   },
   features: {
-    marginBottom: 36,
-    gap: 12,
+    marginBottom: 32,
+    gap: 10,
   },
   featureRow: {
     flexDirection: 'row',
@@ -135,10 +135,11 @@ const styles = StyleSheet.create({
   },
   featureIcon: {
     fontSize: 14,
-    color: colors.accent.primary,
+    color: colors.success,
+    fontWeight: '700',
   },
   featureText: {
-    ...typography.body,
+    fontSize: 15,
     color: colors.text.primary,
   },
   plans: {
@@ -147,13 +148,14 @@ const styles = StyleSheet.create({
   },
   planCard: {
     borderWidth: 1.5,
-    borderColor: colors.bg.tertiary,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 16,
+    backgroundColor: colors.bg.secondary,
   },
   planCardSelected: {
     borderColor: colors.accent.primary,
-    backgroundColor: colors.accent.glow,
+    backgroundColor: colors.bg.secondary,
   },
   planHeader: {
     flexDirection: 'row',
@@ -161,23 +163,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   planLabel: {
-    ...typography.body,
-    fontFamily: 'Jost-SemiBold',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text.secondary,
   },
   planLabelSelected: {
     color: colors.text.primary,
   },
   planPrice: {
-    ...typography.body,
     fontFamily: 'DMMono-Medium',
+    fontSize: 14,
     color: colors.text.secondary,
   },
   planPriceSelected: {
     color: colors.accent.primary,
   },
   planSub: {
-    ...typography.body,
     fontSize: 12,
     color: colors.text.tertiary,
     marginTop: 4,
@@ -185,15 +186,20 @@ const styles = StyleSheet.create({
   subscribeButton: {
     backgroundColor: colors.accent.primary,
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     marginBottom: 20,
+    shadowColor: '#2C2520',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   subscribeText: {
-    ...typography.body,
-    fontFamily: 'Jost-SemiBold',
-    fontSize: 16,
-    color: colors.bg.primary,
+    fontFamily: 'DMMono-Medium',
+    fontSize: 13,
+    letterSpacing: 2,
+    color: colors.text.inverse,
+    textTransform: 'uppercase',
   },
   footer: {
     flexDirection: 'row',
@@ -202,7 +208,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerLink: {
-    ...typography.body,
     fontSize: 12,
     color: colors.text.tertiary,
   },

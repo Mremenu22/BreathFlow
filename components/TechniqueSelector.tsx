@@ -9,7 +9,6 @@ import {
   Pressable,
 } from 'react-native';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 import { techniques, BreathingTechnique } from '../constants/techniques';
 
 interface TechniqueSelectorProps {
@@ -30,7 +29,7 @@ export default function TechniqueSelector({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Breathing Techniques</Text>
+          <Text style={styles.title}>Choose Technique</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
             {techniques
               .filter((t) => t.id !== 'custom')
@@ -76,7 +75,7 @@ export default function TechniqueSelector({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.bg.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -85,38 +84,39 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    maxHeight: '70%',
+    maxHeight: '55%',
   },
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: colors.text.tertiary,
+    backgroundColor: colors.bg.tertiary,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
     marginBottom: 20,
   },
   title: {
-    ...typography.heading,
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 20,
     color: colors.text.primary,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   techniqueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   techniqueRowSelected: {
     backgroundColor: colors.bg.tertiary,
   },
   colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 16,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 14,
   },
   techniqueInfo: {
     flex: 1,
@@ -127,25 +127,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   techniqueName: {
-    ...typography.body,
-    fontFamily: 'Jost-SemiBold',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text.primary,
   },
   techniqueDesc: {
-    ...typography.body,
     fontSize: 13,
-    color: colors.text.secondary,
+    color: colors.text.tertiary,
     marginTop: 2,
   },
   premiumBadge: {
-    backgroundColor: colors.accent.dim,
+    backgroundColor: colors.accent.muted,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   premiumText: {
-    ...typography.label,
+    fontFamily: 'DMMono-Regular',
     fontSize: 9,
-    color: colors.accent.secondary,
+    letterSpacing: 1.5,
+    color: colors.accent.dark,
   },
 });

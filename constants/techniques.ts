@@ -23,7 +23,7 @@ export const techniques: BreathingTechnique[] = [
       { type: 'exhale', duration: 4 },
       { type: 'holdEmpty', duration: 4 },
     ],
-    color: '#D4915C',
+    color: '#A48BBD',
     isPremium: false,
   },
   {
@@ -35,7 +35,7 @@ export const techniques: BreathingTechnique[] = [
       { type: 'hold', duration: 7 },
       { type: 'exhale', duration: 8 },
     ],
-    color: '#5C8BD4',
+    color: '#7B8DB5',
     isPremium: false,
   },
   {
@@ -46,7 +46,18 @@ export const techniques: BreathingTechnique[] = [
       { type: 'inhale', duration: 5.5 },
       { type: 'exhale', duration: 5.5 },
     ],
-    color: '#5CB88A',
+    color: '#8BA89A',
+    isPremium: false,
+  },
+  {
+    id: 'power',
+    name: 'Power Breathing',
+    description: 'Fast rhythm to boost energy and alertness',
+    phases: [
+      { type: 'inhale', duration: 2 },
+      { type: 'exhale', duration: 2 },
+    ],
+    color: '#D4915C',
     isPremium: false,
   },
   {
@@ -69,7 +80,7 @@ export const techniques: BreathingTechnique[] = [
       { type: 'inhale', duration: 1 },
       { type: 'exhale', duration: 6 },
     ],
-    color: '#B88AD4',
+    color: '#C17F5E',
     isPremium: true,
   },
   {
@@ -77,7 +88,7 @@ export const techniques: BreathingTechnique[] = [
     name: 'Custom Pattern',
     description: 'Build your own breathing rhythm',
     phases: [],
-    color: '#E8B88A',
+    color: '#D4A484',
     isPremium: true,
   },
 ];

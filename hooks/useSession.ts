@@ -4,6 +4,7 @@ import { saveSession, Session } from '../utils/storage';
 export function useSession() {
   const completeSession = useCallback(
     async (
+      mood: string,
       techniqueId: string,
       durationSeconds: number,
       cycleCount: number,
@@ -11,6 +12,7 @@ export function useSession() {
     ): Promise<Session> => {
       const session: Session = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        mood,
         techniqueId,
         startedAt: startedAt.toISOString(),
         durationSeconds: Math.round(durationSeconds),

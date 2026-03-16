@@ -1,150 +1,173 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '../constants/colors';
 import { typography } from '../constants/typography';
-import { techniques, BreathingTechnique, BreathingPhase } from '../constants/techniques';
-import { useBreathingEngine } from '../hooks/useBreathingEngine';
-import { useHaptics } from '../hooks/useHaptics';
-import { useSession } from '../hooks/useSession';
-import { getPreferences } from '../utils/storage';
-import BreathingRing from '../components/BreathingRing';
+import { moods, MoodOption } from '../constants/moods';
+import { breathworkBasics } from '../constants/challenge';
+import { getStreakDisplay, StreakData, getChallengeProgress, ChallengeProgress, formatMinutesDisplay, startChallenge } from '../utils/storage';
 import TechniqueSelector from '../components/TechniqueSelector';
-import SessionSummary from '../components/SessionSummary';
+import { techniques } from '../constants/techniques';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_GAP = 12;
+const CARD_PADDING = 24;
+const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
-export default function MainScreen() {
+export default function HomeScreen() {
   const router = useRouter();
-  const [selectedTechnique, setSelectedTechnique] = useState<BreathingTechnique>(techniques[0]);
-  const [showSelector, setShowSelector] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [lastSession, setLastSession] = useState({ duration: 0, cycles: 0 });
-  const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const sessionStartRef = useRef<Date>(new Date());
+  const [streak, setStreak] = useState<StreakData | null>(null);
+  const [challenge, setChallenge] = useState<ChallengeProgress | null>(null);
+  const [showTechniques, setShowTechniques] = useState(false);
 
-  useEffect(() => {
-    getPreferences().then((prefs) => setHapticsEnabled(prefs.hapticsEnabled));
+  const loadData = useCallback(async () => {
+    const [s, c] = await Promise.all([getStreakDisplay(), getChallengeProgress()]);
+    setStreak(s);
+    setChallenge(c);
   }, []);
 
-  const haptics = useHaptics(hapticsEnabled);
-  const { completeSession } = useSession();
-
-  const handlePhaseChange = useCallback(
-    (phase: BreathingPhase) => {
-      switch (phase.type) {
-        case 'inhale':
-          haptics.inhaleStart();
-          break;
-        case 'hold':
-        case 'holdEmpty':
-          haptics.holdStart();
-          break;
-        case 'exhale':
-          haptics.exhaleStart();
-          break;
-      }
-    },
-    [haptics]
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
   );
 
-  const engine = useBreathingEngine(selectedTechnique, handlePhaseChange);
-
-  const handleStart = () => {
-    sessionStartRef.current = new Date();
-    haptics.sessionStart();
-    engine.start();
+  const handleMoodPress = (mood: MoodOption) => {
+    router.push({
+      pathname: '/breathe',
+      params: {
+        moodId: mood.id,
+        techniqueId: mood.techniqueId,
+        duration: mood.defaultDuration.toString(),
+        color: mood.color,
+        subtitle: mood.subtitle,
+      },
+    });
   };
 
-  const handleStop = async () => {
-    const duration = engine.totalElapsed;
-    const cycles = engine.cycleCount;
-    engine.stop();
-    haptics.sessionComplete();
+  const handleTechniqueSelect = (technique: typeof techniques[0]) => {
+    router.push({
+      pathname: '/breathe',
+      params: {
+        moodId: 'manual',
+        techniqueId: technique.id,
+        duration: '300',
+        color: technique.color,
+        subtitle: technique.description,
+      },
+    });
+  };
 
-    if (duration >= 5) {
-      await completeSession(selectedTechnique.id, duration, cycles, sessionStartRef.current);
-      setLastSession({ duration, cycles });
-      setShowSummary(true);
+  const handleChallengeStart = async () => {
+    let c = challenge;
+    if (!c) {
+      c = await startChallenge(breathworkBasics.id);
+      setChallenge(c);
     }
+    const day = breathworkBasics.days[(c.currentDay || 1) - 1];
+    if (!day || !day.mood || !day.duration) return;
+    const mood = moods.find((m) => m.id === day.mood);
+    if (!mood) return;
+    router.push({
+      pathname: '/breathe',
+      params: {
+        moodId: day.mood,
+        techniqueId: mood.techniqueId,
+        duration: day.duration.toString(),
+        color: mood.color,
+        subtitle: day.description,
+        challengeDay: day.day.toString(),
+      },
+    });
   };
 
-  const handleTechniqueSelect = (technique: BreathingTechnique) => {
-    haptics.techniqueSelect();
-    setSelectedTechnique(technique);
-  };
-
-  const isRunning = engine.state === 'running';
+  const currentChallengeDay = challenge && !challenge.isComplete
+    ? breathworkBasics.days[(challenge.currentDay || 1) - 1]
+    : null;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/history')} style={styles.historyButton}>
-          <Text style={styles.historyText}>History</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/settings')} style={styles.iconButton}>
-          <Text style={styles.iconText}>{'\u2699'}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.logo}>breathflow</Text>
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsButton}>
+            <Text style={styles.settingsIcon}>{'\u2699'}</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Breathing Ring — contains timer, phase label, cycle count */}
-      <View style={styles.ringContainer}>
-        <BreathingRing
-          progress={engine.phaseProgress}
-          phaseType={engine.currentPhase?.type ?? null}
-          color={selectedTechnique.color}
-          isActive={isRunning}
-          totalElapsed={engine.totalElapsed}
-          cycleCount={engine.cycleCount}
-        />
-      </View>
+        {/* Question */}
+        <Text style={styles.question}>What do you need{'\n'}right now?</Text>
 
-      {/* Bottom area */}
-      <View style={styles.bottomArea}>
-        {/* Technique name (tappable) */}
-        {!isRunning && (
-          <TouchableOpacity
-            onPress={() => setShowSelector(true)}
-            style={styles.techniqueButton}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.techniqueDot, { backgroundColor: selectedTechnique.color }]} />
-            <Text style={styles.techniqueName}>{selectedTechnique.name}</Text>
-            <Text style={styles.chevron}>{'\u203A'}</Text>
+        {/* Challenge Banner */}
+        {currentChallengeDay && (
+          <TouchableOpacity style={styles.challengeBanner} onPress={handleChallengeStart} activeOpacity={0.7}>
+            <View style={styles.challengeLeft}>
+              <Text style={styles.challengeDay}>Day {currentChallengeDay.day} of 7</Text>
+              <Text style={styles.challengeTitle}>{currentChallengeDay.title}</Text>
+            </View>
+            <View style={styles.challengeAction}>
+              <Text style={styles.challengeActionText}>Start {'\u203A'}</Text>
+            </View>
           </TouchableOpacity>
         )}
 
-        {/* Start/Stop button */}
-        <TouchableOpacity
-          style={[
-            styles.mainButton,
-            isRunning ? styles.stopButton : { backgroundColor: selectedTechnique.color },
-          ]}
-          onPress={isRunning ? handleStop : handleStart}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.mainButtonText, isRunning && styles.stopButtonText]}>
-            {isRunning ? 'STOP' : 'BEGIN'}
-          </Text>
+        {/* Show "Start Challenge" if no challenge started */}
+        {!challenge && (
+          <TouchableOpacity style={styles.challengeBanner} onPress={handleChallengeStart} activeOpacity={0.7}>
+            <View style={styles.challengeLeft}>
+              <Text style={styles.challengeDay}>7-Day Challenge</Text>
+              <Text style={styles.challengeTitle}>{breathworkBasics.subtitle}</Text>
+            </View>
+            <View style={styles.challengeAction}>
+              <Text style={styles.challengeActionText}>Begin {'\u203A'}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Mood Grid */}
+        <View style={styles.moodGrid}>
+          {moods.map((mood) => (
+            <TouchableOpacity
+              key={mood.id}
+              style={[styles.moodCard, { borderLeftColor: mood.color }]}
+              onPress={() => handleMoodPress(mood)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+              <Text style={styles.moodTitle}>{mood.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Choose technique link */}
+        <TouchableOpacity style={styles.techniqueLink} onPress={() => setShowTechniques(true)}>
+          <Text style={styles.techniqueLinkText}>or choose a technique {'\u203A'}</Text>
         </TouchableOpacity>
-      </View>
 
-      {/* Technique Selector */}
+        {/* Streak Bar */}
+        {streak && streak.totalSessions > 0 && (
+          <TouchableOpacity style={styles.streakBar} onPress={() => router.push('/history')} activeOpacity={0.7}>
+            <Text style={styles.streakText}>
+              {'\uD83D\uDD25'} {streak.currentStreak > 0 ? `Day ${streak.currentStreak}` : 'Start a streak'} · {streak.totalSessions} sessions · {formatMinutesDisplay(streak.totalMinutes)} total
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
       <TechniqueSelector
-        visible={showSelector}
-        selectedId={selectedTechnique.id}
+        visible={showTechniques}
+        selectedId=""
         onSelect={handleTechniqueSelect}
-        onClose={() => setShowSelector(false)}
-      />
-
-      {/* Session Summary */}
-      <SessionSummary
-        visible={showSummary}
-        technique={selectedTechnique}
-        durationSeconds={lastSession.duration}
-        cycleCount={lastSession.cycles}
-        onDismiss={() => setShowSummary(false)}
+        onClose={() => setShowTechniques(false)}
       />
     </SafeAreaView>
   );
@@ -155,85 +178,123 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg.primary,
   },
-  topBar: {
+  scroll: {
+    paddingHorizontal: CARD_PADDING,
+    paddingBottom: 40,
+  },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 8,
+    marginBottom: 28,
   },
-  historyButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  historyText: {
-    ...typography.body,
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 20,
-    color: colors.text.secondary,
-  },
-  ringContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomArea: {
-    alignItems: 'center',
-    paddingBottom: 34,
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  techniqueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bg.secondary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 10,
-  },
-  techniqueDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  techniqueName: {
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  chevron: {
+  logo: {
+    fontFamily: 'Fraunces-SemiBold',
     fontSize: 18,
     color: colors.text.tertiary,
-    marginLeft: 4,
+    letterSpacing: 0.5,
   },
-  mainButton: {
-    width: SCREEN_WIDTH * 0.8,
-    paddingVertical: 16,
+  settingsButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIcon: {
+    fontSize: 20,
+    color: colors.text.tertiary,
+  },
+  question: {
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 28,
+    letterSpacing: -0.3,
+    color: colors.text.primary,
+    marginBottom: 24,
+    lineHeight: 36,
+  },
+  challengeBanner: {
+    backgroundColor: colors.accent.muted,
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  challengeLeft: {
+    flex: 1,
+  },
+  challengeDay: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: colors.accent.dark,
+    marginBottom: 2,
+  },
+  challengeTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.accent.dark,
+  },
+  challengeAction: {
+    backgroundColor: colors.accent.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  challengeActionText: {
+    fontFamily: 'DMMono-Medium',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: colors.text.inverse,
+  },
+  moodGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
+  },
+  moodCard: {
+    width: CARD_WIDTH,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: 16,
+    padding: 18,
+    borderLeftWidth: 3,
+    shadowColor: '#2C2520',
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  moodEmoji: {
+    fontSize: 28,
+    marginBottom: 10,
+  },
+  moodTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+    lineHeight: 20,
+  },
+  techniqueLink: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  techniqueLinkText: {
+    fontSize: 14,
+    color: colors.text.tertiary,
+  },
+  streakBar: {
+    backgroundColor: colors.accent.muted,
     borderRadius: 12,
+    padding: 14,
     alignItems: 'center',
   },
-  mainButtonText: {
-    fontFamily: 'Jost-SemiBold',
-    fontSize: 14,
-    letterSpacing: 4,
-    color: colors.bg.primary,
-    textTransform: 'uppercase',
-  },
-  stopButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.text.tertiary,
-  },
-  stopButtonText: {
-    color: colors.text.secondary,
+  streakText: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 12,
+    letterSpacing: 0.5,
+    color: colors.accent.dark,
   },
 });

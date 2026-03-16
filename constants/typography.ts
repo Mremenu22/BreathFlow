@@ -3,24 +3,31 @@ import { TextStyle } from 'react-native';
 export const typography: Record<string, TextStyle> = {
   timer: {
     fontFamily: 'DMMono-Medium',
-    fontSize: 64,
-    letterSpacing: 4,
+    fontSize: 56,
+    letterSpacing: 3,
   },
   heading: {
-    fontFamily: 'Jost-SemiBold',
-    fontSize: 22,
-    letterSpacing: 0.5,
+    fontFamily: 'Fraunces-SemiBold',
+    fontSize: 24,
+    letterSpacing: -0.3,
+  },
+  subheading: {
+    fontFamily: 'Fraunces-Regular',
+    fontSize: 17,
   },
   body: {
-    fontFamily: 'Jost-Regular',
     fontSize: 15,
     lineHeight: 22,
-    letterSpacing: 0.2,
+  },
+  bodyBold: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
   },
   label: {
     fontFamily: 'DMMono-Regular',
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 2.5,
     textTransform: 'uppercase',
   },
   stat: {
