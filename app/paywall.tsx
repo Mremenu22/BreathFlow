@@ -30,7 +30,12 @@ export default function PaywallScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.closeButton}
+        accessibilityLabel="Close"
+        accessibilityRole="button"
+      >
         <Text style={styles.closeText}>{'\u2715'}</Text>
       </TouchableOpacity>
 
@@ -55,41 +60,64 @@ export default function PaywallScreen() {
                 style={[styles.planCard, isSelected && styles.planCardSelected]}
                 onPress={() => setSelectedPlan(plan.id)}
                 activeOpacity={0.7}
+                accessibilityLabel={plan.label + ' plan, ' + plan.price}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
               >
-                <View style={styles.planHeader}>
-                  <Text style={[styles.planLabel, isSelected && styles.planLabelSelected]}>
-                    {plan.label}
-                  </Text>
-                  <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
-                    {plan.price}
-                  </Text>
+                <View style={[
+                  styles.radioCircle,
+                  isSelected && styles.radioCircleSelected,
+                ]} />
+                <View style={styles.planContent}>
+                  <View style={styles.planHeader}>
+                    <Text style={[styles.planLabel, isSelected && styles.planLabelSelected]}>
+                      {plan.label}
+                    </Text>
+                    <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
+                      {plan.price}
+                    </Text>
+                  </View>
+                  {(plan.sub || plan.trial) && (
+                    <Text style={styles.planSub}>
+                      {[plan.sub, plan.trial].filter(Boolean).join(' \u00B7 ')}
+                    </Text>
+                  )}
                 </View>
-                {(plan.sub || plan.trial) && (
-                  <Text style={styles.planSub}>
-                    {[plan.sub, plan.trial].filter(Boolean).join(' \u00B7 ')}
-                  </Text>
-                )}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <TouchableOpacity style={styles.subscribeButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.subscribeButton}
+          activeOpacity={0.8}
+          accessibilityLabel={selectedPlan === 'lifetime' ? 'Purchase lifetime plan' : 'Start free trial'}
+          accessibilityRole="button"
+        >
           <Text style={styles.subscribeText}>
             {selectedPlan === 'lifetime' ? 'Purchase' : 'Start Free Trial'}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Restore purchases"
+            accessibilityRole="button"
+          >
             <Text style={styles.footerLink}>Restore Purchases</Text>
           </TouchableOpacity>
           <Text style={styles.footerDot}>{'\u00B7'}</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Terms of service"
+            accessibilityRole="link"
+          >
             <Text style={styles.footerLink}>Terms</Text>
           </TouchableOpacity>
           <Text style={styles.footerDot}>{'\u00B7'}</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Privacy policy"
+            accessibilityRole="link"
+          >
             <Text style={styles.footerLink}>Privacy</Text>
           </TouchableOpacity>
         </View>
@@ -106,6 +134,10 @@ const styles = StyleSheet.create({
   closeButton: {
     alignSelf: 'flex-end',
     padding: 20,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeText: {
     fontSize: 18,
@@ -147,6 +179,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: 14,
@@ -156,6 +190,21 @@ const styles = StyleSheet.create({
   planCardSelected: {
     borderColor: colors.accent.primary,
     backgroundColor: colors.bg.secondary,
+  },
+  radioCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    marginRight: 12,
+  },
+  radioCircleSelected: {
+    backgroundColor: colors.accent.primary,
+    borderColor: colors.accent.primary,
+  },
+  planContent: {
+    flex: 1,
   },
   planHeader: {
     flexDirection: 'row',
@@ -189,7 +238,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

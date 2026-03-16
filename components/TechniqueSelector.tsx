@@ -47,6 +47,8 @@ export default function TechniqueSelector({
                       onClose();
                     }}
                     activeOpacity={0.7}
+                    accessibilityLabel={technique.name + (technique.isPremium ? ', premium' : '')}
+                    accessibilityRole="button"
                   >
                     <View
                       style={[styles.colorDot, { backgroundColor: technique.color }]}
@@ -104,6 +106,7 @@ const styles = StyleSheet.create({
   techniqueRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 52,
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 12,

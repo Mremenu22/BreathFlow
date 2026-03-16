@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
@@ -63,12 +63,20 @@ export default function HistoryScreen() {
     return acc;
   }, {});
 
-  const sectionData = Object.entries(groupedSessions);
+  const sections = Object.entries(groupedSessions).map(([title, data]) => ({
+    title,
+    data,
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
           <Text style={styles.backText}>{'\u2039'} Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>History</Text>
@@ -76,7 +84,7 @@ export default function HistoryScreen() {
       </View>
 
       {/* Stats bar */}
-      {streak && (
+      {streak && streak.totalSessions > 0 && (
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{streak.totalSessions}</Text>
@@ -103,29 +111,28 @@ export default function HistoryScreen() {
           <Text style={styles.emptyText}>Complete a breathing session to see your history here.</Text>
         </View>
       ) : (
-        <FlatList
-          data={sectionData}
-          keyExtractor={([label]) => label}
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item: [label, groupSessions] }) => (
-            <View style={styles.dateGroup}>
-              <Text style={styles.dateLabel}>{label}</Text>
-              {groupSessions.map((session) => (
-                <View key={session.id} style={styles.sessionCard}>
-                  <View style={[styles.sessionDot, { backgroundColor: getTechniqueColor(session.techniqueId) }]} />
-                  <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionTitle}>
-                      {getMoodEmoji(session.mood)} {getTechniqueName(session.techniqueId)}
-                    </Text>
-                    <Text style={styles.sessionMeta}>
-                      {formatDuration(session.durationSeconds)} · {session.cycleCount} cycles · {new Date(session.startedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.dateLabel}>{title}</Text>
+          )}
+          renderItem={({ item: session }) => (
+            <View style={styles.sessionCard}>
+              <View style={[styles.sessionDot, { backgroundColor: getTechniqueColor(session.techniqueId) }]} />
+              <View style={styles.sessionInfo}>
+                <Text style={styles.sessionTitle}>
+                  {getMoodEmoji(session.mood)} {getTechniqueName(session.techniqueId)}
+                </Text>
+                <Text style={styles.sessionMeta}>
+                  {formatDuration(session.durationSeconds)} · {session.cycleCount} cycles · {new Date(session.startedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
             </View>
           )}
+          stickySectionHeadersEnabled={false}
         />
       )}
     </SafeAreaView>
@@ -146,6 +153,8 @@ const styles = StyleSheet.create({
   },
   backButton: {
     width: 60,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   backText: {
     fontSize: 16,
@@ -168,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -180,7 +189,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: 'DMMono-Regular',
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     color: colors.text.tertiary,
@@ -198,6 +207,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
     marginBottom: 10,
+    marginTop: 10,
   },
   sessionCard: {
     flexDirection: 'row',
@@ -206,7 +216,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 8,
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

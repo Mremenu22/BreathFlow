@@ -22,7 +22,7 @@ export const colors = {
   text: {
     primary: '#2C2520',
     secondary: '#7A6E64',
-    tertiary: '#A89E94',
+    tertiary: '#857A70',
     inverse: '#F7F4EF',
   },
   ring: {

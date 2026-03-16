@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../constants/colors';
 import { techniques, BreathingPhase } from '../constants/techniques';
@@ -9,10 +9,9 @@ import { useSession } from '../hooks/useSession';
 import { getPreferences, completeChallengeDay } from '../utils/storage';
 import BreathingRing from '../components/BreathingRing';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export default function BreatheScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{
     moodId: string;
     techniqueId: string;
@@ -99,7 +98,7 @@ export default function BreatheScreen() {
 
   // Phase countdown (seconds remaining in current phase)
   const phaseRemaining = engine.currentPhase
-    ? Math.max(0, Math.ceil(engine.currentPhase.duration - engine.currentPhase.duration * engine.phaseProgress))
+    ? Math.max(0, Math.ceil(engine.currentPhase.duration * (1 - Math.min(engine.phaseProgress, 1))))
     : 0;
 
   return (
@@ -107,7 +106,12 @@ export default function BreatheScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         {!isRunning ? (
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
             <Text style={styles.backText}>{'\u2039'} Back</Text>
           </TouchableOpacity>
         ) : (
@@ -132,6 +136,7 @@ export default function BreatheScreen() {
           phaseRemaining={phaseRemaining}
           techniqueName={technique.name}
           targetDuration={targetDuration}
+          screenWidth={screenWidth}
         />
       </View>
 
@@ -140,12 +145,15 @@ export default function BreatheScreen() {
         <TouchableOpacity
           style={[
             styles.mainButton,
+            { width: screenWidth * 0.8 },
             isRunning
               ? styles.stopButton
               : { backgroundColor: moodColor },
           ]}
           onPress={isRunning ? handleStop : handleStart}
           activeOpacity={0.8}
+          accessibilityLabel={isRunning ? "Stop breathing session" : "Begin breathing session"}
+          accessibilityRole="button"
         >
           <Text style={[styles.mainButtonText, isRunning && { color: moodColor }]}>
             {isRunning ? 'STOP' : 'BEGIN'}
@@ -172,6 +180,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     minWidth: 60,
+    minHeight: 44,
   },
   backText: {
     fontSize: 16,
@@ -195,11 +204,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   mainButton: {
-    width: SCREEN_WIDTH * 0.8,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

@@ -6,24 +6,25 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '../constants/colors';
-import { typography } from '../constants/typography';
 import { moods, MoodOption } from '../constants/moods';
 import { breathworkBasics } from '../constants/challenge';
 import { getStreakDisplay, StreakData, getChallengeProgress, ChallengeProgress, formatMinutesDisplay, startChallenge } from '../utils/storage';
 import TechniqueSelector from '../components/TechniqueSelector';
 import { techniques } from '../constants/techniques';
+import { useHaptics } from '../hooks/useHaptics';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_PADDING = 24;
-const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP) / 2;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const CARD_WIDTH = (screenWidth - CARD_PADDING * 2 - CARD_GAP) / 2;
+  const haptics = useHaptics();
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [challenge, setChallenge] = useState<ChallengeProgress | null>(null);
   const [showTechniques, setShowTechniques] = useState(false);
@@ -41,6 +42,7 @@ export default function HomeScreen() {
   );
 
   const handleMoodPress = (mood: MoodOption) => {
+    haptics.buttonPress();
     router.push({
       pathname: '/breathe',
       params: {
@@ -99,7 +101,12 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>breathflow</Text>
-          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsButton}>
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            style={styles.settingsButton}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+          >
             <Text style={styles.settingsIcon}>{'\u2699'}</Text>
           </TouchableOpacity>
         </View>
@@ -109,7 +116,13 @@ export default function HomeScreen() {
 
         {/* Challenge Banner */}
         {currentChallengeDay && (
-          <TouchableOpacity style={styles.challengeBanner} onPress={handleChallengeStart} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.challengeBanner}
+            onPress={handleChallengeStart}
+            activeOpacity={0.7}
+            accessibilityLabel={"Day " + currentChallengeDay.day + " of 7: " + currentChallengeDay.title + ". Tap to start"}
+            accessibilityRole="button"
+          >
             <View style={styles.challengeLeft}>
               <Text style={styles.challengeDay}>Day {currentChallengeDay.day} of 7</Text>
               <Text style={styles.challengeTitle}>{currentChallengeDay.title}</Text>
@@ -120,9 +133,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Challenge Complete Banner */}
+        {challenge && challenge.isComplete && (
+          <View style={styles.challengeBanner}>
+            <View style={styles.challengeLeft}>
+              <Text style={styles.challengeDay}>Challenge Complete</Text>
+              <Text style={styles.challengeTitle}>Congratulations! You finished the 7-day challenge {'\uD83C\uDF89'}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Show "Start Challenge" if no challenge started */}
         {!challenge && (
-          <TouchableOpacity style={styles.challengeBanner} onPress={handleChallengeStart} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.challengeBanner}
+            onPress={handleChallengeStart}
+            activeOpacity={0.7}
+            accessibilityLabel={"Day 1 of 7: " + breathworkBasics.subtitle + ". Tap to start"}
+            accessibilityRole="button"
+          >
             <View style={styles.challengeLeft}>
               <Text style={styles.challengeDay}>7-Day Challenge</Text>
               <Text style={styles.challengeTitle}>{breathworkBasics.subtitle}</Text>
@@ -138,9 +167,11 @@ export default function HomeScreen() {
           {moods.map((mood) => (
             <TouchableOpacity
               key={mood.id}
-              style={[styles.moodCard, { borderLeftColor: mood.color }]}
+              style={[styles.moodCard, { width: CARD_WIDTH, borderLeftColor: mood.color, backgroundColor: mood.color + '0F' }]}
               onPress={() => handleMoodPress(mood)}
               activeOpacity={0.7}
+              accessibilityLabel={mood.title}
+              accessibilityRole="button"
             >
               <Text style={styles.moodEmoji}>{mood.emoji}</Text>
               <Text style={styles.moodTitle}>{mood.title}</Text>
@@ -149,13 +180,24 @@ export default function HomeScreen() {
         </View>
 
         {/* Choose technique link */}
-        <TouchableOpacity style={styles.techniqueLink} onPress={() => setShowTechniques(true)}>
+        <TouchableOpacity
+          style={styles.techniqueLink}
+          onPress={() => setShowTechniques(true)}
+          accessibilityLabel="Choose a specific technique"
+          accessibilityRole="button"
+        >
           <Text style={styles.techniqueLinkText}>or choose a technique {'\u203A'}</Text>
         </TouchableOpacity>
 
         {/* Streak Bar */}
         {streak && streak.totalSessions > 0 && (
-          <TouchableOpacity style={styles.streakBar} onPress={() => router.push('/history')} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.streakBar}
+            onPress={() => router.push('/history')}
+            activeOpacity={0.7}
+            accessibilityLabel="View session history"
+            accessibilityRole="button"
+          >
             <Text style={styles.streakText}>
               {'\uD83D\uDD25'} {streak.currentStreak > 0 ? `Day ${streak.currentStreak}` : 'Start a streak'} · {streak.totalSessions} sessions · {formatMinutesDisplay(streak.totalMinutes)} total
             </Text>
@@ -196,8 +238,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   settingsButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -256,12 +298,10 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
   moodCard: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.bg.secondary,
     borderRadius: 16,
     padding: 18,
     borderLeftWidth: 3,
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.06,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },

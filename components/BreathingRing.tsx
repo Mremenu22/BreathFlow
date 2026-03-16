@@ -1,13 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../constants/colors';
 import { PHASE_LABELS } from '../constants/techniques';
 import { formatTime } from '../utils/formatTime';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const RING_SIZE = SCREEN_WIDTH * 0.68;
-const BASE_RADIUS = RING_SIZE * 0.42;
-const MAX_RADIUS = RING_SIZE * 0.48;
 const RING_STROKE = 6;
 const TRACK_STROKE = 2;
 
@@ -21,6 +17,7 @@ interface BreathingRingProps {
   phaseRemaining?: number;
   techniqueName?: string;
   targetDuration?: number;
+  screenWidth?: number;
 }
 
 export default function BreathingRing({
@@ -33,7 +30,18 @@ export default function BreathingRing({
   phaseRemaining = 0,
   techniqueName = '',
   targetDuration = 300,
+  screenWidth = 390,
 }: BreathingRingProps) {
+  const RING_SIZE = screenWidth * 0.68;
+  const BASE_RADIUS = RING_SIZE * 0.42;
+  const MAX_RADIUS = RING_SIZE * 0.48;
+
+  const formatTarget = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return s === 0 ? `${m} min` : `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const radius = (() => {
     if (!isActive || !phaseType) return BASE_RADIUS;
     switch (phaseType) {
@@ -119,11 +127,15 @@ export default function BreathingRing({
             <Text style={[styles.phaseLabel, { color }]}>{phaseLabel}</Text>
             <Text style={[styles.phaseCountdown, { color }]}>{phaseRemaining}s</Text>
             <Text style={styles.elapsed}>{formatTime(totalElapsed)}</Text>
+            {cycleCount > 0 && (
+              <Text style={styles.cycleLabel}>Cycle {cycleCount}</Text>
+            )}
           </>
         ) : (
           <>
             {/* Pre-session: target duration + technique name */}
-            <Text style={styles.targetDuration}>{formatTime(targetDuration)}</Text>
+            <Text style={styles.targetDuration}>{formatTarget(targetDuration)}</Text>
+            <Text style={styles.durationLabel}>DURATION</Text>
             <Text style={styles.techniqueNameInner}>{techniqueName}</Text>
           </>
         )}
@@ -179,11 +191,25 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     marginTop: 12,
   },
+  cycleLabel: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.text.tertiary,
+    marginTop: 4,
+  },
   targetDuration: {
     fontFamily: 'DMMono-Medium',
-    fontSize: 48,
+    fontSize: 40,
     letterSpacing: 3,
     color: colors.text.primary,
+  },
+  durationLabel: {
+    fontFamily: 'DMMono-Regular',
+    fontSize: 11,
+    letterSpacing: 2,
+    color: colors.text.tertiary,
+    marginTop: 2,
   },
   techniqueNameInner: {
     fontFamily: 'Fraunces-Regular',

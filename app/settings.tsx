@@ -26,12 +26,34 @@ export default function SettingsScreen() {
     await savePreferences({ [key]: value });
   };
 
-  if (!prefs) return null;
+  if (!prefs) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Text style={styles.backText}>{'\u2039'} Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Settings</Text>
+          <View style={{ width: 60 }} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
           <Text style={styles.backText}>{'\u2039'} Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
@@ -47,7 +69,7 @@ export default function SettingsScreen() {
               value={prefs.hapticsEnabled}
               onValueChange={(v) => updatePref('hapticsEnabled', v)}
               trackColor={{ false: colors.bg.tertiary, true: colors.accent.muted }}
-              thumbColor={prefs.hapticsEnabled ? colors.accent.primary : '#ccc'}
+              thumbColor={prefs.hapticsEnabled ? colors.accent.primary : colors.bg.tertiary}
             />
           </View>
           <View style={styles.rowDivider} />
@@ -57,7 +79,7 @@ export default function SettingsScreen() {
               value={prefs.soundEnabled}
               onValueChange={(v) => updatePref('soundEnabled', v)}
               trackColor={{ false: colors.bg.tertiary, true: colors.accent.muted }}
-              thumbColor={prefs.soundEnabled ? colors.accent.primary : '#ccc'}
+              thumbColor={prefs.soundEnabled ? colors.accent.primary : colors.bg.tertiary}
             />
           </View>
         </View>
@@ -70,12 +92,19 @@ export default function SettingsScreen() {
             style={styles.row}
             onPress={() => router.push('/paywall')}
             activeOpacity={0.6}
+            accessibilityLabel="Upgrade to Premium"
+            accessibilityRole="button"
           >
             <Text style={styles.rowLabel}>Upgrade to Premium</Text>
             <Text style={styles.rowChevron}>{'\u203A'}</Text>
           </TouchableOpacity>
           <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.6}
+            accessibilityLabel="Restore purchases"
+            accessibilityRole="button"
+          >
             <Text style={styles.rowLabel}>Restore Purchases</Text>
             <Text style={styles.rowChevron}>{'\u203A'}</Text>
           </TouchableOpacity>
@@ -85,12 +114,22 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.6}
+            accessibilityLabel="Privacy Policy"
+            accessibilityRole="button"
+          >
             <Text style={styles.rowLabel}>Privacy Policy</Text>
             <Text style={styles.rowChevron}>{'\u203A'}</Text>
           </TouchableOpacity>
           <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.6}
+            accessibilityLabel="Terms of Service"
+            accessibilityRole="button"
+          >
             <Text style={styles.rowLabel}>Terms of Service</Text>
             <Text style={styles.rowChevron}>{'\u203A'}</Text>
           </TouchableOpacity>
@@ -119,6 +158,8 @@ const styles = StyleSheet.create({
   },
   backButton: {
     width: 60,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   backText: {
     fontSize: 16,
@@ -145,7 +186,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.bg.secondary,
     borderRadius: 14,
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

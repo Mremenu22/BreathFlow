@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../constants/colors';
 import { formatDuration } from '../utils/formatTime';
@@ -17,19 +17,40 @@ export default function CompleteScreen() {
   const cycles = parseInt(params.cycles || '0', 10);
   const accentColor = params.color || colors.accent.primary;
 
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const statsOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(headerOpacity, {
+      toValue: 1,
+      duration: 600,
+      delay: 100,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.timing(statsOpacity, {
+      toValue: 1,
+      duration: 600,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Checkmark */}
-        <View style={[styles.checkCircle, { borderColor: accentColor }]}>
-          <Text style={[styles.checkMark, { color: accentColor }]}>{'\u2713'}</Text>
-        </View>
+        <Animated.View style={{ opacity: headerOpacity, alignItems: 'center' }}>
+          <View style={[styles.checkCircle, { borderColor: accentColor }]}>
+            <Text style={[styles.checkMark, { color: accentColor }]}>{'\u2713'}</Text>
+          </View>
 
-        <Text style={styles.title}>Well done.</Text>
+          <Text style={styles.title}>Well done.</Text>
+        </Animated.View>
         <Text style={styles.techniqueName}>{params.techniqueName}</Text>
 
         {/* Stats */}
-        <View style={styles.statsCard}>
+        <Animated.View style={[styles.statsCard, { opacity: statsOpacity }]}>
           <View style={styles.stat}>
             <Text style={styles.statValue}>{formatDuration(duration)}</Text>
             <Text style={styles.statLabel}>DURATION</Text>
@@ -39,13 +60,15 @@ export default function CompleteScreen() {
             <Text style={styles.statValue}>{cycles}</Text>
             <Text style={styles.statLabel}>CYCLES</Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Done button */}
         <TouchableOpacity
           style={[styles.doneButton, { backgroundColor: accentColor }]}
           onPress={() => router.replace('/')}
           activeOpacity={0.8}
+          accessibilityLabel="Done, return to home"
+          accessibilityRole="button"
         >
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
@@ -95,7 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     width: '100%',
-    shadowColor: '#2C2520',
+    shadowColor: colors.text.primary,
     shadowOpacity: 0.06,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
