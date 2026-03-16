@@ -28,7 +28,7 @@ export default function TechniqueSelector({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={styles.sheet}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <Text style={styles.title}>Breathing Techniques</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -67,7 +67,7 @@ export default function TechniqueSelector({
                 );
               })}
           </ScrollView>
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );

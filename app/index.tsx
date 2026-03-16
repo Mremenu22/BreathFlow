@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
 import { typography } from '../constants/typography';
@@ -7,11 +7,12 @@ import { techniques, BreathingTechnique, BreathingPhase } from '../constants/tec
 import { useBreathingEngine } from '../hooks/useBreathingEngine';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSession } from '../hooks/useSession';
+import { getPreferences } from '../utils/storage';
 import BreathingRing from '../components/BreathingRing';
-import PhaseLabel from '../components/PhaseLabel';
-import TimerDisplay from '../components/TimerDisplay';
 import TechniqueSelector from '../components/TechniqueSelector';
 import SessionSummary from '../components/SessionSummary';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function MainScreen() {
   const router = useRouter();
@@ -19,8 +20,14 @@ export default function MainScreen() {
   const [showSelector, setShowSelector] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [lastSession, setLastSession] = useState({ duration: 0, cycles: 0 });
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const sessionStartRef = useRef<Date>(new Date());
 
-  const haptics = useHaptics();
+  useEffect(() => {
+    getPreferences().then((prefs) => setHapticsEnabled(prefs.hapticsEnabled));
+  }, []);
+
+  const haptics = useHaptics(hapticsEnabled);
   const { completeSession } = useSession();
 
   const handlePhaseChange = useCallback(
@@ -44,6 +51,7 @@ export default function MainScreen() {
   const engine = useBreathingEngine(selectedTechnique, handlePhaseChange);
 
   const handleStart = () => {
+    sessionStartRef.current = new Date();
     haptics.sessionStart();
     engine.start();
   };
@@ -55,7 +63,7 @@ export default function MainScreen() {
     haptics.sessionComplete();
 
     if (duration >= 5) {
-      await completeSession(selectedTechnique.id, duration, cycles);
+      await completeSession(selectedTechnique.id, duration, cycles, sessionStartRef.current);
       setLastSession({ duration, cycles });
       setShowSummary(true);
     }
@@ -72,38 +80,25 @@ export default function MainScreen() {
     <SafeAreaView style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/history')} style={styles.iconButton}>
-          <Text style={styles.iconText}>{'\u2630'}</Text>
+        <TouchableOpacity onPress={() => router.push('/history')} style={styles.historyButton}>
+          <Text style={styles.historyText}>History</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/settings')} style={styles.iconButton}>
           <Text style={styles.iconText}>{'\u2699'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Timer */}
-      <View style={styles.timerContainer}>
-        <TimerDisplay seconds={engine.totalElapsed} isActive={isRunning} />
-      </View>
-
-      {/* Breathing Ring */}
+      {/* Breathing Ring — contains timer, phase label, cycle count */}
       <View style={styles.ringContainer}>
         <BreathingRing
           progress={engine.phaseProgress}
           phaseType={engine.currentPhase?.type ?? null}
           color={selectedTechnique.color}
           isActive={isRunning}
+          totalElapsed={engine.totalElapsed}
+          cycleCount={engine.cycleCount}
         />
       </View>
-
-      {/* Phase Label */}
-      <PhaseLabel phaseType={engine.currentPhase?.type ?? null} isActive={isRunning} />
-
-      {/* Cycle count */}
-      {isRunning && engine.cycleCount > 0 && (
-        <Text style={styles.cycleText}>
-          {engine.cycleCount} {engine.cycleCount === 1 ? 'cycle' : 'cycles'}
-        </Text>
-      )}
 
       {/* Bottom area */}
       <View style={styles.bottomArea}>
@@ -163,8 +158,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  historyButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  historyText: {
+    ...typography.body,
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   iconButton: {
     width: 44,
@@ -176,24 +181,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: colors.text.secondary,
   },
-  timerContainer: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
   ringContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cycleText: {
-    ...typography.label,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: 8,
-  },
   bottomArea: {
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: 34,
+    paddingHorizontal: 24,
     gap: 16,
   },
   techniqueButton: {
@@ -220,16 +216,17 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   mainButton: {
-    paddingHorizontal: 64,
+    width: SCREEN_WIDTH * 0.8,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   mainButtonText: {
-    ...typography.label,
+    fontFamily: 'Jost-SemiBold',
     fontSize: 14,
     letterSpacing: 4,
     color: colors.bg.primary,
-    fontFamily: 'Jost-SemiBold',
+    textTransform: 'uppercase',
   },
   stopButton: {
     backgroundColor: 'transparent',

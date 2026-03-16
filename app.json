@@ -36,8 +36,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
-      "expo-haptics"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

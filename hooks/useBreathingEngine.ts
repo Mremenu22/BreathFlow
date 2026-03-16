@@ -1,28 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { BreathingTechnique, BreathingPhase } from '../constants/techniques';
 
 export type EngineState = 'idle' | 'running' | 'paused' | 'completed';
 
-interface BreathingEngineState {
-  state: EngineState;
-  currentPhaseIndex: number;
-  currentPhase: BreathingPhase | null;
-  phaseProgress: number;
-  totalElapsed: number;
-  cycleCount: number;
-}
-
-interface BreathingEngineActions {
-  start: () => void;
-  pause: () => void;
-  resume: () => void;
-  stop: () => void;
-}
-
 export function useBreathingEngine(
   technique: BreathingTechnique,
   onPhaseChange?: (phase: BreathingPhase) => void
-): BreathingEngineState & BreathingEngineActions {
+) {
   const [state, setState] = useState<EngineState>('idle');
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [phaseElapsed, setPhaseElapsed] = useState(0);
@@ -30,29 +14,35 @@ export function useBreathingEngine(
   const [cycleCount, setCycleCount] = useState(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTickRef = useRef<number>(0);
   const stateRef = useRef(state);
-  const phaseIndexRef = useRef(currentPhaseIndex);
-  const phaseElapsedRef = useRef(phaseElapsed);
-  const totalElapsedRef = useRef(totalElapsed);
-  const cycleCountRef = useRef(cycleCount);
+  const phaseIndexRef = useRef(0);
+  const phaseElapsedRef = useRef(0);
+  const totalElapsedRef = useRef(0);
+  const cycleCountRef = useRef(0);
   const onPhaseChangeRef = useRef(onPhaseChange);
 
   stateRef.current = state;
-  phaseIndexRef.current = currentPhaseIndex;
-  phaseElapsedRef.current = phaseElapsed;
-  totalElapsedRef.current = totalElapsed;
-  cycleCountRef.current = cycleCount;
   onPhaseChangeRef.current = onPhaseChange;
 
-  const phases = technique.phases;
+  // Stabilize phases reference
+  const phases = useMemo(() => technique.phases, [technique.id]);
+
   const currentPhase = phases.length > 0 ? phases[currentPhaseIndex] : null;
   const phaseProgress = currentPhase ? Math.min(phaseElapsed / currentPhase.duration, 1) : 0;
 
   const tick = useCallback(() => {
     if (stateRef.current !== 'running' || phases.length === 0) return;
 
-    const newPhaseElapsed = phaseElapsedRef.current + 0.1;
-    const newTotalElapsed = totalElapsedRef.current + 0.1;
+    const now = Date.now();
+    const delta = (now - lastTickRef.current) / 1000;
+    lastTickRef.current = now;
+
+    // Clamp delta to avoid huge jumps if app was backgrounded
+    const clampedDelta = Math.min(delta, 0.5);
+
+    const newPhaseElapsed = phaseElapsedRef.current + clampedDelta;
+    const newTotalElapsed = totalElapsedRef.current + clampedDelta;
 
     const currentPhaseDuration = phases[phaseIndexRef.current].duration;
 
@@ -66,11 +56,11 @@ export function useBreathingEngine(
       }
 
       phaseIndexRef.current = nextIndex;
-      phaseElapsedRef.current = 0;
+      phaseElapsedRef.current = newPhaseElapsed - currentPhaseDuration;
       cycleCountRef.current = newCycleCount;
 
       setCurrentPhaseIndex(nextIndex);
-      setPhaseElapsed(0);
+      setPhaseElapsed(phaseElapsedRef.current);
       setCycleCount(newCycleCount);
 
       if (onPhaseChangeRef.current) {
@@ -87,6 +77,7 @@ export function useBreathingEngine(
 
   useEffect(() => {
     if (state === 'running') {
+      lastTickRef.current = Date.now();
       intervalRef.current = setInterval(tick, 100);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -109,24 +100,22 @@ export function useBreathingEngine(
     phaseElapsedRef.current = 0;
     totalElapsedRef.current = 0;
     cycleCountRef.current = 0;
+    lastTickRef.current = Date.now();
     setState('running');
     if (onPhaseChangeRef.current && phases.length > 0) {
       onPhaseChangeRef.current(phases[0]);
     }
   }, [phases]);
 
-  const pause = useCallback(() => {
-    setState('paused');
-  }, []);
-
-  const resume = useCallback(() => {
-    setState('running');
-  }, []);
+  const pause = useCallback(() => setState('paused'), []);
+  const resume = useCallback(() => setState('running'), []);
 
   const stop = useCallback(() => {
     setState('idle');
     setCurrentPhaseIndex(0);
     setPhaseElapsed(0);
+    phaseIndexRef.current = 0;
+    phaseElapsedRef.current = 0;
   }, []);
 
   return {

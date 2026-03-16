@@ -26,8 +26,12 @@ const defaultPreferences: UserPreferences = {
 };
 
 export async function getSessions(): Promise<Session[]> {
-  const data = await AsyncStorage.getItem(SESSIONS_KEY);
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = await AsyncStorage.getItem(SESSIONS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function saveSession(session: Session): Promise<void> {
@@ -37,8 +41,12 @@ export async function saveSession(session: Session): Promise<void> {
 }
 
 export async function getPreferences(): Promise<UserPreferences> {
-  const data = await AsyncStorage.getItem(PREFS_KEY);
-  return data ? { ...defaultPreferences, ...JSON.parse(data) } : defaultPreferences;
+  try {
+    const data = await AsyncStorage.getItem(PREFS_KEY);
+    return data ? { ...defaultPreferences, ...JSON.parse(data) } : defaultPreferences;
+  } catch {
+    return defaultPreferences;
+  }
 }
 
 export async function savePreferences(prefs: Partial<UserPreferences>): Promise<void> {
@@ -52,31 +60,47 @@ export function getStreak(sessions: Session[]): { current: number; longest: numb
   const days = new Set(
     sessions.map((s) => new Date(s.startedAt).toISOString().split('T')[0])
   );
-  const sortedDays = Array.from(days).sort().reverse();
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Walk backwards from today counting consecutive days
   let current = 0;
-  let longest = 0;
-  let streak = 0;
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  let d = new Date(today);
 
-  // Current streak must include today or yesterday
-  if (sortedDays[0] !== today && sortedDays[0] !== yesterday) {
+  // Check if today or yesterday has a session (otherwise current streak is 0)
+  const todayStr = d.toISOString().split('T')[0];
+  const yesterdayStr = new Date(d.getTime() - 86400000).toISOString().split('T')[0];
+
+  if (!days.has(todayStr) && !days.has(yesterdayStr)) {
     current = 0;
+  } else {
+    // If no session today, start from yesterday
+    if (!days.has(todayStr)) {
+      d = new Date(d.getTime() - 86400000);
+    }
+    while (days.has(d.toISOString().split('T')[0])) {
+      current++;
+      d = new Date(d.getTime() - 86400000);
+    }
   }
 
-  for (let i = 0; i < sortedDays.length; i++) {
-    const expected = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
-    if (sortedDays.includes(expected)) {
+  // Find longest streak by sorting all days and walking forward
+  const sortedDays = Array.from(days).sort();
+  let longest = 0;
+  let streak = 1;
+
+  for (let i = 1; i < sortedDays.length; i++) {
+    const prev = new Date(sortedDays[i - 1]).getTime();
+    const curr = new Date(sortedDays[i]).getTime();
+    if (curr - prev <= 86400000) {
       streak++;
     } else {
-      if (i <= 1 || current === 0) current = streak;
       longest = Math.max(longest, streak);
       streak = 1;
     }
   }
-  if (current === 0) current = streak;
-  longest = Math.max(longest, streak);
+  longest = Math.max(longest, streak, current);
 
   return { current, longest };
 }
